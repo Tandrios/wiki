@@ -1,3 +1,4 @@
+import random
 from django.http import HttpResponse
 import markdown2
 
@@ -12,15 +13,15 @@ def index(request):
     })
 
 def entry(request, name):
-    try:    
-        return render(request, "encyclopedia/entry.html", {
-            "entry_name": name.capitalize(),
-            "entry": markdown2.markdown(util.get_entry(name.capitalize())),
-        })
-    except TypeError:
-        return render(request, "encyclopedia/404.html", {
-            "entry": name.capitalize(),
-        })
+    for entry in util.list_entries():
+        if name.lower() == entry.lower():
+            return render(request, "encyclopedia/entry.html", {
+                "entry_name": entry,
+                "entry": markdown2.markdown(util.get_entry(entry)),
+            })
+    return render(request, "encyclopedia/404.html", {
+        "entry": name,
+    })
 
 def search(request):
     query = request.GET.get("q")
@@ -55,6 +56,44 @@ def new(request):
         util.save_entry(title.capitalize(), entrytext)
 
         return redirect(f"/{title}")
-    
     else:
         return render(request, "encyclopedia/new.html")
+
+def edit(request):
+    if request.method == "POST":
+        title = request.POST.get('title')
+        entrytext = request.POST.get('entrytext')
+
+        if not entrytext:
+            return render(request, "encyclopedia/edit.html", {
+                "alarm": "Fill in the entry!"
+            })
+
+        util.save_entry(title.capitalize(), entrytext)
+
+        return redirect(f"/{title}")
+    else:
+        title = request.GET.get('title')
+        print(title)
+
+        entrytext = util.get_entry(title)
+        print(entrytext)
+
+        return render(request, "encyclopedia/edit.html", {
+            "entry_name": title,
+            "entry_text": entrytext,
+        })
+
+def random_page(request):
+    entries = util.list_entries()
+
+    random.seed()
+    entrynr = random.randrange(0, len(entries), 1)
+
+    entry = entries[entrynr]
+
+    return render(request, "encyclopedia/entry.html", {
+        "entry_name": entry,
+        "entry": markdown2.markdown(util.get_entry(entry)),
+    })
+    
